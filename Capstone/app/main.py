@@ -4,7 +4,12 @@ import pandas as pd
 from scipy import signal
 
 # Import csv
-df = pd.read_csv('/Users/parthvikulkarni/Projects/Capstone/app/data/kick_test1.csv')
+df1 = pd.read_csv('/Users/parthvikulkarni/Capstone-1/Capstone/app/data/kick_test1.csv')
+df = pd.read_csv('/Users/parthvikulkarni/Capstone-1/Capstone/app/data/kick_test2.csv')
+df3 = pd.read_csv('/Users/parthvikulkarni/Capstone-1/Capstone/app/data/kick_test3.csv')
+df4 = pd.read_csv('/Users/parthvikulkarni/Capstone-1/Capstone/app/data/kick_test4.csv')
+df5 = pd.read_csv('/Users/parthvikulkarni/Capstone-1/Capstone/app/data/kick_test5.csv')
+
 raw_acc_x = df[df.columns[0]]
 raw_acc_y = df[df.columns[1]]
 raw_acc_z = df[df.columns[2]]
