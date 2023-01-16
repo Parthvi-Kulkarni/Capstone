@@ -6,6 +6,9 @@ import datetime
 
 # Import csv
 df = pd.read_csv('/Users/parthvikulkarni/Capstone-1/Capstone/app/data/kick_test2.csv')
+df2 = pd.read_csv('Capstone/app/data/testD.csv')
+df3 = pd.read_csv('Capstone/app/data/testE.csv')
+df4 = pd.read_csv('Capstone/app/data/testF.csv')
 
 raw_acc_x = df[df.columns[0]]
 raw_acc_y = df[df.columns[1]]
@@ -16,6 +19,7 @@ raw_gyr_z = df[df.columns[5]]
 raw_A1 = [raw_acc_x, raw_acc_y, raw_acc_z]
 raw_G1 = [raw_gyr_x, raw_gyr_y, raw_gyr_z]
 time = df[df.columns[6]]
+length = len(time)
 
 # TODO: convert time from %H:%M:%S:%f to seconds.milliseconds
 
@@ -44,12 +48,26 @@ plt.plot(time, signal_gyr_z, 'b')
 numpeaks = signal.find_peaks(signal_gyr_z) # Gives the indices of the peaks
 firstpeak = numpeaks[0][0]
 lastpeak = numpeaks[0][-1]
+
 t_first = datetime.datetime.strptime(time[firstpeak], '%H:%M:%S.%f')
+t1_ms = t_first.timestamp()*1000
+milliseconds = []
+
+for i in range(0,length):
+    timestamp = datetime.datetime.strptime(time[i], '%H:%M:%S.%f')
+    ms = timestamp.timestamp() * 1000
+    milliseconds.append(ms)
+
+# Add a column to the dataframe
+df['Milliseconds'] = milliseconds
+
+# t_second = t_first.second + t_first.microsecond + 1500000
 t_last = datetime.datetime.strptime(time[lastpeak], '%H:%M:%S.%f')
 delta = t_last - t_first
 total_kicks = len(numpeaks[0])
 kicking_frequency = total_kicks / delta.total_seconds()
 print('Kicking frequency: ' + str(kicking_frequency) + ' per second')
+
 
 # Slope detection :  Look for places where the second derivative (der2) is larger (at least half of the signal's max size)
 # Peak detection :  Look at the gaps in between indices to identify where each peak begins and ends to find the midpoint
