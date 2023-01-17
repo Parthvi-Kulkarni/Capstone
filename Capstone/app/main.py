@@ -40,7 +40,7 @@ signal_gyr_z = signal.filtfilt(b, a, raw_gyr_z) # apply the filter
 
 # Plot of IIR Filtered Data
 plt.plot(time, signal_gyr_z, 'b')
-#plt.show()
+plt.show()
 
 # TODO: Apply Butterworth Filter to Data
 
@@ -49,8 +49,9 @@ numpeaks = signal.find_peaks(signal_gyr_z) # Gives the indices of the peaks
 firstpeak = numpeaks[0][0]
 lastpeak = numpeaks[0][-1]
 
-t_first = datetime.datetime.strptime(time[firstpeak], '%H:%M:%S.%f')
-t1_ms = t_first.timestamp()*1000
+# Zero-crossing
+zero_crossings = np.where(np.diff(np.signbit(signal_gyr_z)))
+
 milliseconds = []
 
 for i in range(0,length):
@@ -61,27 +62,55 @@ for i in range(0,length):
 # Add a column to the dataframe
 df['Milliseconds'] = milliseconds
 
-# t_second = t_first.second + t_first.microsecond + 1500000
-t_last = datetime.datetime.strptime(time[lastpeak], '%H:%M:%S.%f')
-delta = t_last - t_first
-total_kicks = len(numpeaks[0])
-kicking_frequency = total_kicks / delta.total_seconds()
-print('Kicking frequency: ' + str(kicking_frequency) + ' per second')
+ms = df[df.columns[7]]
 
+# Algorithm 1: Using peak to peak for kicking frequency
+# Optimization metrics: window_size affects kicking frequency
+window_size = 1500
+length = len(ms)
+interval = ms[0] + window_size
+kicking_freq = []
+peak = 0
+index = 0
+kicks = 0
+while(ms[length - 1] >= interval):
+    while (ms[peak] <= interval):
+        peak = numpeaks[0][index]
+        kicks = kicks + 1
+        index = index + 1
+    kicking_freq.append(kicks/(window_size/1000))
+    kicks = 0
+    interval = interval + window_size
 
-# Slope detection :  Look for places where the second derivative (der2) is larger (at least half of the signal's max size)
-# Peak detection :  Look at the gaps in between indices to identify where each peak begins and ends to find the midpoint
-# window = 21
-# der2 = signal.savgol_filter(signal_gyr_z, window_length=window, polyorder=2, deriv=2)
-# print(der2)
-# max_der2 = np.max(np.abs(der2))
-# print(max_der2)
-# large = np.where(np.abs(der2) > max_der2/2)[0]
-# print(large)
-# gaps = np.diff(large) > window
-# print(gaps)
-# begins = np.insert(large[1:][gaps], 0, large[0])
-# print(begins)
-# ends = np.append(large[:-1][gaps], large[-1])
-# print(ends)
-# peaks = ((begins+ends)/2).astype(np.int) 
+sum_frequency = 0
+num_windows = len(kicking_freq)
+for i in range(0, num_windows):
+    sum_frequency = sum_frequency + kicking_freq[i]
+average_frequency = sum_frequency/num_windows * 2
+
+print('Kicking frequency: ' + str(average_frequency) + ' kicks per second')
+
+# Algorithm 2: Using zero-crossing for kicking frequency
+window_size = 1500
+length = len(ms)
+interval = ms[0] + window_size
+kicking_freq = []
+crossing = 0
+index = 0
+kicks = 0
+while(ms[length - 1] >= interval):
+    while (ms[crossing] <= interval):
+        crossing = zero_crossings[0][index]
+        kicks = kicks + 1
+        index = index + 1
+    kicking_freq.append(kicks/(window_size/1000))
+    kicks = 0
+    interval = interval + window_size
+
+sum_frequency = 0
+num_windows = len(kicking_freq)
+for i in range(0, num_windows):
+    sum_frequency = sum_frequency + kicking_freq[i]
+average_frequency = sum_frequency/num_windows * 2
+
+print('Kicking frequency: ' + str(average_frequency/2) + ' kicks per second')
