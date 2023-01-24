@@ -1,12 +1,14 @@
+from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy import signal
 from numpy.fft import fft
 import kickingfrequency
+import math
 
 # Import csv
-df = pd.read_csv('Capstone/app/data/swim1.csv')
+df = pd.read_csv('Capstone/app/data/data3.csv')
 
 raw_acc_x = df[df.columns[0]]/9.81
 raw_acc_y = df[df.columns[1]]/9.81
@@ -21,19 +23,19 @@ raw_G1 = [raw_gyr_x, raw_gyr_y, raw_gyr_z]
 time = df[df.columns[7]]
 length = len(time)
 
+# Convert microseconds to seconds
 seconds = []
-for i in range(0,length):
-    second = time[i]/1000000
-    seconds.append(second)
+for i in range(0, length):
+    seconds.append(time[i]/math.pow(10, 6) - time[0]*math.pow(10, 6))
 
-# Add a column to the dataframe
-len(seconds)
-
-plt.title('Raw Angular Velocity in the Z Direction')
-plt.xlabel('Time')
-plt.ylabel('Raw Angular Velocity')
-plt.plot(seconds, raw_gyr_z, 'b')
-plt.show()
+## To handle timestamping for datasets D, E, and F:
+# milliseconds = []
+# for i in range(0,length):
+#     timestamp = datetime.strptime(time[i], '%H:%M:%S.%f')
+#     ms = timestamp.timestamp() * 1000
+#     milliseconds.append(ms)
+# df['Milliseconds'] = milliseconds
+# ms = df[df.columns[8]]
 
 # Create Filter Parameters
 b,a = signal.butter(4,0.1,'lowpass')
@@ -44,52 +46,66 @@ acc_y = signal.filtfilt(b, a, raw_acc_y)
 acc_z = signal.filtfilt(b, a, raw_acc_z)
 gyr_x = signal.filtfilt(b, a, raw_gyr_x)
 gyr_y = signal.filtfilt(b, a, raw_gyr_y)
-gyr_z = signal.filtfilt(b, a, raw_gyr_z)
 
-plt.title('Raw Angular Velocity in the Z Direction')
-plt.xlabel('Time')
-plt.ylabel('Raw Angular Velocity')
-plt.plot(time, raw_gyr_z, 'b')
+## Compute Fourier Transform
+fs = 100
+dt = 1/fs
+n = length
+fhat = np.fft.fft(raw_gyr_z, n) #computes the fft
+psd = fhat * np.conj(fhat)/n
+freq = (1/(dt*n)) * np.arange(n) #frequency array
+idxs_half = np.arange(1, np.floor(n/2), dtype=np.int32) #first half index
+
+## Visualization of Fourier Transform
+plt.plot(freq[idxs_half], np.abs(psd[idxs_half]), color='b', lw=0.5, label='PSD noisy')
+plt.xlabel('Frequencies in Hz')
+plt.ylabel('Amplitude')
+#plt.show()
+
+## Filter out noise
+threshold = 1*math.pow(10, 6)
+psd_idxs = psd > threshold #array of 0 and 1
+psd_clean = psd * psd_idxs #zero out all the unnecessary powers
+fhat_clean = psd_idxs * fhat #used to retrieve the signal
+
+signal_filtered = np.fft.ifft(fhat_clean) #inverse fourier transform
+
+## Visualization
+fig, ax = plt.subplots(4,1)
+ax[0].plot(seconds, raw_gyr_z, color='b', lw=0.5, label='Noisy Signal')
+ax[0].set_xlabel('Time (seconds)')
+ax[0].set_ylabel('Angular Velocity')
+ax[0].legend()
+
+ax[1].plot(freq[idxs_half], np.abs(psd[idxs_half]), color='b', lw=0.5, label='PSD noisy')
+ax[1].set_xlabel('Frequencies in Hz')
+ax[1].set_ylabel('Amplitude')
+ax[1].legend()
+
+ax[2].plot(freq[idxs_half], np.abs(psd_clean[idxs_half]), color='r', lw=1, label='PSD clean')
+ax[2].set_xlabel('Frequencies in Hz')
+ax[2].set_ylabel('Amplitude')
+ax[2].legend()
+
+ax[3].plot(seconds, signal_filtered, color='r', lw=1, label='Clean Signal Retrieved')
+ax[3].set_xlabel('Time (seconds)')
+ax[3].set_ylabel('Angular Velocity')
+ax[3].legend()
+
+plt.subplots_adjust(hspace=0.4)
 plt.show()
-
-FFT = fft(raw_gyr_z)
-N = len(FFT)
-sample_frequency = 88
-freq = np.linspace(0, sample_frequency, N)
-plt.title('FFT Spectrum of Angular Velocity in the Z Direction')
-plt.xlabel('Frequency (Hz)')
-plt.ylabel('Count')
-plt.xlim(0, sample_frequency/2)
-plt.plot(freq, FFT)
-plt.show()
-
-b, a = signal.butter(3, 0.0175, 'low') # 3 order of the filter and 0.05 would be the highpass cutoff
-signal_gyr_z = signal.filtfilt(b, a, raw_gyr_z) # apply the filter
-
-
 
 # Zero-crossing
-zero_crossings = np.where(np.diff(np.signbit(signal_gyr_z)))
+print(type(signal_filtered))
+zero_crossings = np.where(np.diff(np.signbit(signal_filtered)))
 zeros = np.zeros(len(zero_crossings))
 
-plt.title('Gyroscope Data in the Z direction')
-plt.xlabel('Time')
+plt.title('Gyroscope Data')
+plt.xlabel('Time (seconds)')
 plt.ylabel('Angular Velocity')
-plt.xlim(156489203, 231489294)
-plt.plot(time, signal_gyr_z, 'b')
+plt.plot(seconds, signal_filtered, 'b')
 plt.plot(zero_crossings, zeros, marker='o')
 plt.show()
-# milliseconds = []
 
-
-# for i in range(0,length):
-#     timestamp = datetime.datetime.strptime(time[i], '%H:%M:%S.%f')
-#     ms = timestamp.timestamp() * 1000
-#     milliseconds.append(ms)
-
-# Add a column to the dataframe
-# df['Milliseconds'] = milliseconds
-
-# ms = df[df.columns[8]]
-average_frequency = kickingfrequency.zero_crossing(time, zero_crossings)
+average_frequency = kickingfrequency.zero_crossing(seconds, zero_crossings)
 print('Kicking frequency: ' + str(average_frequency) + ' kicks per second')
