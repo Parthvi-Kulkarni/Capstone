@@ -6,40 +6,52 @@ from numpy.fft import fft
 import kickingfrequency
 
 # Import csv
-df = pd.read_csv('Capstone/app/data/testD.csv')
-df3 = pd.read_csv('/Users/parthvikulkarni/Capstone-1/Capstone/app/data/testE.csv')
-df4 = pd.read_csv('Capstone/app/data/testF.csv')
-df_swim = pd.read_csv('Capstone/app/data/data.csv')
+df = pd.read_csv('Capstone/app/data/swim1.csv')
 
-raw_acc_x = df_swim[df_swim.columns[0]]
-raw_acc_y = df_swim[df_swim.columns[1]]
-raw_acc_z = df_swim[df_swim.columns[2]]
-raw_gyr_x = df_swim[df_swim.columns[3]]
-raw_gyr_y = df_swim[df_swim.columns[4]]
-raw_gyr_z = df_swim[df_swim.columns[5]]
-raw_bar = df_swim[df_swim.columns[6]]
+raw_acc_x = df[df.columns[0]]/9.81
+raw_acc_y = df[df.columns[1]]/9.81
+raw_acc_z = df[df.columns[2]]/9.81
+raw_gyr_x = df[df.columns[3]]
+raw_gyr_y = df[df.columns[4]]
+raw_gyr_z = df[df.columns[5]]
+
 raw_A1 = [raw_acc_x, raw_acc_y, raw_acc_z]
 raw_G1 = [raw_gyr_x, raw_gyr_y, raw_gyr_z]
-time = df_swim[df_swim.columns[7]]
+
+time = df[df.columns[7]]
 length = len(time)
 
-plt.title('Angular Velocity in the Z Direction')
-plt.xlabel('Time')
-plt.ylabel('Angular Velocity')
-plt.xlim(156489203, 231489294)
-plt.plot(time, raw_gyr_z, 'b')
-plt.show()
-
 seconds = []
-
-
 for i in range(0,length):
     second = time[i]/1000000
     seconds.append(second)
 
 # Add a column to the dataframe
 len(seconds)
-# df['Seconds'] = seconds
+
+plt.title('Raw Angular Velocity in the Z Direction')
+plt.xlabel('Time')
+plt.ylabel('Raw Angular Velocity')
+plt.plot(seconds, raw_gyr_z, 'b')
+plt.show()
+
+# Create Filter Parameters
+b,a = signal.butter(4,0.1,'lowpass')
+
+# Filter Signals
+acc_x = signal.filtfilt(b, a, raw_acc_x)
+acc_y = signal.filtfilt(b, a, raw_acc_y)
+acc_z = signal.filtfilt(b, a, raw_acc_z)
+gyr_x = signal.filtfilt(b, a, raw_gyr_x)
+gyr_y = signal.filtfilt(b, a, raw_gyr_y)
+gyr_z = signal.filtfilt(b, a, raw_gyr_z)
+
+plt.title('Raw Angular Velocity in the Z Direction')
+plt.xlabel('Time')
+plt.ylabel('Raw Angular Velocity')
+plt.plot(time, raw_gyr_z, 'b')
+plt.show()
+
 FFT = fft(raw_gyr_z)
 N = len(FFT)
 sample_frequency = 88
@@ -50,8 +62,7 @@ plt.ylabel('Count')
 plt.xlim(0, sample_frequency/2)
 plt.plot(freq, FFT)
 plt.show()
-#FFTs
-# Applying an IIR Filter
+
 b, a = signal.butter(3, 0.0175, 'low') # 3 order of the filter and 0.05 would be the highpass cutoff
 signal_gyr_z = signal.filtfilt(b, a, raw_gyr_z) # apply the filter
 

@@ -50,6 +50,7 @@ seconds = []
 
 start = datetime.datetime.strptime(time[0],'%H:%M:%S.%f')
 
+
 for i in range(0,length):
     ts = datetime.datetime.strptime(time[i], '%H:%M:%S.%f')
     duration = ts - start
