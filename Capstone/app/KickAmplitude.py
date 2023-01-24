@@ -12,7 +12,7 @@ from pyquaternion import Quaternion
 df = pd.read_csv('C:/Users/jade-/PycharmProjects/Capstone/Capstone/app/data/testE.csv')
 
 # Create Filter Parameters
-b,a = signal.butter(4,0.1,'lowpass')
+b, a = signal.butter(4, 0.1, 'lowpass')
 
 # Retrieve raw data files
 raw_acc_x = df[df.columns[0]]/9.81
@@ -44,6 +44,10 @@ G = G.transpose()
 
 # Get time in seconds
 seconds = []
+
+# for i in range(0, length):
+#     seconds.append(time[i]/math.pow(10, 6) - time[0]*math.pow(10, 6))
+
 start = datetime.datetime.strptime(time[0],'%H:%M:%S.%f')
 
 for i in range(0,length):
@@ -54,6 +58,7 @@ for i in range(0,length):
 
 # Get angle from gyroscope
 ang_z = scipy.integrate.cumtrapz(gyr_z, seconds)
+plt.figure(1)
 plt.plot(seconds[0:-1], ang_z)
 plt.title('Rotation about Z over Time')
 plt.xlabel('time (s)')
@@ -80,6 +85,7 @@ for i in range (0,len(Q)):
 for i in range(1,len(Q)):
     dist.append(Quaternion.distance(Quat[0], Quat[i]))
 
+plt.figure(2)
 plt.plot(seconds[0:-1], dist)
 plt.title('Quaternion distance over time')
 plt.xlabel('time (s)')
@@ -92,6 +98,7 @@ angle = []
 for i in range(0,len(Quat)):
     angle.append(Quat[i].degrees)
 
+plt.figure(3)
 plt.plot(seconds, angle)
 plt.title('Quaternion angle over time')
 plt.xlabel('time (s)')
