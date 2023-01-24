@@ -1,5 +1,6 @@
 def zero_crossing(ms, zero_crossings):
-    window_size = 1500
+    window_size = 1500000
+    second = 1000000
     length = len(ms)
     interval = ms[0] + window_size
     kicking_freq = []
@@ -11,7 +12,7 @@ def zero_crossing(ms, zero_crossings):
             crossing = zero_crossings[0][index]
             kicks = kicks + 1
             index = index + 1
-        kicking_freq.append(kicks/(window_size/1000))
+        kicking_freq.append(kicks/(window_size/second))
         kicks = 0
         interval = interval + window_size
     sum_frequency = 0
@@ -19,7 +20,10 @@ def zero_crossing(ms, zero_crossings):
     for i in range(0, num_windows):
         sum_frequency = sum_frequency + kicking_freq[i]
     sum_frequency = sum_frequency * 2
-    return sum_frequency/num_windows
+    if (num_windows > 0):
+        return sum_frequency/num_windows
+    else:
+        return sum_frequency
 
 def peak_detection(ms, numpeaks):
     window_size = 1500
@@ -34,7 +38,7 @@ def peak_detection(ms, numpeaks):
             peak = numpeaks[0][index]
             kicks = kicks + 1
             index = index + 1
-        kicking_freq.append(kicks/(window_size/1000))
+        kicking_freq.append(kicks/(window_size/second))
         kicks = 0
         interval = interval + window_size
     sum_frequency = 0
