@@ -63,12 +63,14 @@ plt.ylabel('Amplitude')
 #plt.show()
 
 ## Filter out noise
-threshold = 1*math.pow(10, 6)
+threshold = 0.1*math.pow(10, 6)
 psd_idxs = psd > threshold #array of 0 and 1
 psd_clean = psd * psd_idxs #zero out all the unnecessary powers
 fhat_clean = psd_idxs * fhat #used to retrieve the signal
 
-signal_filtered = np.fft.ifft(fhat_clean) #inverse fourier transform
+b,a = signal.butter(4,0.4,'lowpass')
+signal_filtered = signal.filtfilt(b, a, raw_gyr_z)
+# signal_filtered = np.fft.ifft(fhat_clean) #inverse fourier transform
 
 ## Visualization
 fig, ax = plt.subplots(4,1)
@@ -96,16 +98,16 @@ plt.subplots_adjust(hspace=0.4)
 plt.show()
 
 # Zero-crossing
-print(type(signal_filtered))
-zero_crossings = np.where(np.diff(np.signbit(signal_filtered)))
+# print(type(signal_filtered))
+zero_crossings = np.where(np.diff(np.signbit(signal_filtered, casting='same_kind')))
 zeros = np.zeros(len(zero_crossings))
 
-plt.title('Gyroscope Data')
-plt.xlabel('Time (seconds)')
-plt.ylabel('Angular Velocity')
-plt.plot(seconds, signal_filtered, 'b')
-plt.plot(zero_crossings, zeros, marker='o')
-plt.show()
+# plt.title('Gyroscope Data')
+# plt.xlabel('Time (seconds)')
+# plt.ylabel('Angular Velocity')
+# plt.plot(seconds, signal_filtered, 'b')
+# plt.plot(zero_crossings, zeros, marker='o')
+# plt.show()
 
-average_frequency = kickingfrequency.zero_crossing(seconds, zero_crossings)
+average_frequency = kickingfrequency.zero_crossing(time, zero_crossings)
 print('Kicking frequency: ' + str(average_frequency) + ' kicks per second')
