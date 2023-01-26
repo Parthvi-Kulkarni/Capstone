@@ -26,7 +26,7 @@ length = len(time)
 # Convert microseconds to seconds
 seconds = []
 for i in range(0, length):
-    seconds.append(time[i]/math.pow(10, 6) - time[0]*math.pow(10, 6))
+    seconds.append(time[i]/math.pow(10, 6))
 
 ## To handle timestamping for datasets D, E, and F:
 # milliseconds = []
@@ -36,16 +36,6 @@ for i in range(0, length):
 #     milliseconds.append(ms)
 # df['Milliseconds'] = milliseconds
 # ms = df[df.columns[8]]
-
-# Create Filter Parameters
-b,a = signal.butter(4,0.1,'lowpass')
-
-# Filter Signals
-acc_x = signal.filtfilt(b, a, raw_acc_x)
-acc_y = signal.filtfilt(b, a, raw_acc_y)
-acc_z = signal.filtfilt(b, a, raw_acc_z)
-gyr_x = signal.filtfilt(b, a, raw_gyr_x)
-gyr_y = signal.filtfilt(b, a, raw_gyr_y)
 
 ## Compute Fourier Transform
 fs = 100
@@ -60,17 +50,24 @@ idxs_half = np.arange(1, np.floor(n/2), dtype=np.int32) #first half index
 plt.plot(freq[idxs_half], np.abs(psd[idxs_half]), color='b', lw=0.5, label='PSD noisy')
 plt.xlabel('Frequencies in Hz')
 plt.ylabel('Amplitude')
-#plt.show()
+plt.show()
 
 ## Filter out noise
-threshold = 0.1*math.pow(10, 6)
+threshold = 1*math.pow(10, 6)
 psd_idxs = psd > threshold #array of 0 and 1
 psd_clean = psd * psd_idxs #zero out all the unnecessary powers
 fhat_clean = psd_idxs * fhat #used to retrieve the signal
 
-b,a = signal.butter(4,0.4,'lowpass')
-signal_filtered = signal.filtfilt(b, a, raw_gyr_z)
+b,a = signal.butter(4,0.02,'lowpass')
 # signal_filtered = np.fft.ifft(fhat_clean) #inverse fourier transform
+signal_filtered = signal.filtfilt(b, a, raw_gyr_z)
+
+# Filter Signals
+acc_x = signal.filtfilt(b, a, raw_acc_x)
+acc_y = signal.filtfilt(b, a, raw_acc_y)
+acc_z = signal.filtfilt(b, a, raw_acc_z)
+gyr_x = signal.filtfilt(b, a, raw_gyr_x)
+gyr_y = signal.filtfilt(b, a, raw_gyr_y)
 
 ## Visualization
 fig, ax = plt.subplots(4,1)
@@ -99,15 +96,20 @@ plt.show()
 
 # Zero-crossing
 # print(type(signal_filtered))
-zero_crossings = np.where(np.diff(np.signbit(signal_filtered, casting='same_kind')))
+zero_crossings = np.where(np.diff(np.signbit(signal_filtered)))
 zeros = np.zeros(len(zero_crossings))
 
-# plt.title('Gyroscope Data')
-# plt.xlabel('Time (seconds)')
-# plt.ylabel('Angular Velocity')
-# plt.plot(seconds, signal_filtered, 'b')
-# plt.plot(zero_crossings, zeros, marker='o')
-# plt.show()
+length = len(seconds)
+translated_time = []
+for i in range(0, length):
+    translated_time.append(seconds[i] - seconds[0])
+
+plt.title('Gyroscope Data')
+plt.xlabel('Time (seconds)')
+plt.ylabel('Angular Velocity')
+plt.plot(seconds, signal_filtered, 'b')
+plt.plot(zero_crossings, zeros, marker='o')
+plt.show()
 
 average_frequency = kickingfrequency.zero_crossing(time, zero_crossings)
 print('Kicking frequency: ' + str(average_frequency) + ' kicks per second')
