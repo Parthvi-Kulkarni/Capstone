@@ -118,5 +118,7 @@ for i in range(0, length):
 # plt.plot(zero_crossings, zeros, marker='o')
 # plt.show()
 
+
+## IMPLEMENT NEW ZERO_CROSSING METHOD HERE INSTEAD OF CALLING KICKING FREQUENCY
 average_frequency = kickingfrequency.zero_crossing(time, zero_crossings)
 print('Kicking frequency: ' + str(average_frequency) + ' kicks per second')
