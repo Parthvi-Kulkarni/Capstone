@@ -8,7 +8,7 @@ import kickingfrequency
 import math
 
 # Import csv
-df = pd.read_csv('Capstone/app/data/data3.csv')
+df = pd.read_csv('Capstone/app/data/cut_data0130_1.csv')
 
 raw_acc_x = df[df.columns[0]]/9.81
 raw_acc_y = df[df.columns[1]]/9.81
@@ -37,7 +37,13 @@ for i in range(0, length):
 # df['Milliseconds'] = milliseconds
 # ms = df[df.columns[8]]
 
-## Compute Fourier Transform
+# Visualization of Raw Data
+plt.plot(time, raw_gyr_z, color='b', label='Noisy Signal')
+plt.xlabel('Time (seconds)')
+plt.ylabel('Angular Velocity')
+plt.show()
+
+# Compute Fourier Transform
 fs = 100
 dt = 1/fs
 n = length
@@ -46,20 +52,18 @@ psd = fhat * np.conj(fhat)/n
 freq = (1/(dt*n)) * np.arange(n) #frequency array
 idxs_half = np.arange(1, np.floor(n/2), dtype=np.int32) #first half index
 
-## Visualization of Fourier Transform
+# Visualization of Fourier Transform
 plt.plot(freq[idxs_half], np.abs(psd[idxs_half]), color='b', lw=0.5, label='PSD noisy')
 plt.xlabel('Frequencies in Hz')
 plt.ylabel('Amplitude')
 plt.show()
 
-## Filter out noise
-threshold = 1*math.pow(10, 6)
-psd_idxs = psd > threshold #array of 0 and 1
-psd_clean = psd * psd_idxs #zero out all the unnecessary powers
-fhat_clean = psd_idxs * fhat #used to retrieve the signal
+# INSERT IFFT HERE
+#
+#
 
-b,a = signal.butter(4,0.02,'lowpass')
-# signal_filtered = np.fft.ifft(fhat_clean) #inverse fourier transform
+
+b,a = signal.butter(4,3.14/fs,'lowpass')
 signal_filtered = signal.filtfilt(b, a, raw_gyr_z)
 
 # Filter Signals
@@ -69,33 +73,36 @@ acc_z = signal.filtfilt(b, a, raw_acc_z)
 gyr_x = signal.filtfilt(b, a, raw_gyr_x)
 gyr_y = signal.filtfilt(b, a, raw_gyr_y)
 
-## Visualization
-fig, ax = plt.subplots(4,1)
+#Visualization
+fig, ax = plt.subplots(2,1)
 ax[0].plot(seconds, raw_gyr_z, color='b', lw=0.5, label='Noisy Signal')
 ax[0].set_xlabel('Time (seconds)')
 ax[0].set_ylabel('Angular Velocity')
 ax[0].legend()
 
-ax[1].plot(freq[idxs_half], np.abs(psd[idxs_half]), color='b', lw=0.5, label='PSD noisy')
-ax[1].set_xlabel('Frequencies in Hz')
-ax[1].set_ylabel('Amplitude')
+ax[1].plot(seconds, signal_filtered, color='r', lw=1, label='Clean Signal Retrieved')
+ax[1].set_xlabel('Time (seconds)')
+ax[1].set_ylabel('Angular Velocity')
 ax[1].legend()
-
-ax[2].plot(freq[idxs_half], np.abs(psd_clean[idxs_half]), color='r', lw=1, label='PSD clean')
-ax[2].set_xlabel('Frequencies in Hz')
-ax[2].set_ylabel('Amplitude')
-ax[2].legend()
-
-ax[3].plot(seconds, signal_filtered, color='r', lw=1, label='Clean Signal Retrieved')
-ax[3].set_xlabel('Time (seconds)')
-ax[3].set_ylabel('Angular Velocity')
-ax[3].legend()
 
 plt.subplots_adjust(hspace=0.4)
 plt.show()
 
+plt.plot(seconds, raw_gyr_z, color='b', label="Noisy Signal")
+plt.plot(seconds, signal_filtered, color='r', label="Clean Signal")
+plt.xlabel("Time (seconds)")
+plt.ylabel("Angular Velocity")
+plt.show()
+
+fhat2 = np.fft.fft(signal_filtered, n) #computes the fft
+psd_clean = fhat2 * np.conj(fhat2)/n
+
+plt.plot(freq[idxs_half], np.abs(psd_clean[idxs_half]), color='b', lw=0.5, label='PSD clean')
+plt.xlabel('Frequencies in Hz')
+plt.ylabel('Amplitude')
+plt.show()
+
 # Zero-crossing
-# print(type(signal_filtered))
 zero_crossings = np.where(np.diff(np.signbit(signal_filtered)))
 zeros = np.zeros(len(zero_crossings))
 
@@ -104,12 +111,12 @@ translated_time = []
 for i in range(0, length):
     translated_time.append(seconds[i] - seconds[0])
 
-plt.title('Gyroscope Data')
-plt.xlabel('Time (seconds)')
-plt.ylabel('Angular Velocity')
-plt.plot(seconds, signal_filtered, 'b')
-plt.plot(zero_crossings, zeros, marker='o')
-plt.show()
+# plt.title('Gyroscope Data')
+# plt.xlabel('Time (seconds)')
+# plt.ylabel('Angular Velocity')
+# plt.plot(seconds, signal_filtered, 'b')
+# plt.plot(zero_crossings, zeros, marker='o')
+# plt.show()
 
 average_frequency = kickingfrequency.zero_crossing(time, zero_crossings)
 print('Kicking frequency: ' + str(average_frequency) + ' kicks per second')
