@@ -1,5 +1,5 @@
 import scipy
-from scipy.fft import fft, ifft
+from scipy.fft import fft, ifft, irfft
 from scipy.fft import fft2, ifft
 import numpy as np
 
@@ -14,4 +14,5 @@ def fourierFilt(raw_sig):
     pX = np.sort(p1)
     lim = pX[-1-int(l/2*0.05)]
     y[p2 < lim] = 0
-    return scipy.fft.ifft(y)
+    val = irfft(y)
+    return val
