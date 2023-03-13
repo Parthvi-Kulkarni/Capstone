@@ -178,3 +178,47 @@ plt.xlabel("Time (s)")
 plt.ylabel('Amplitude (deg)')
 plt.title("Amplitude per Kick")
 plt.show()
+
+#Jerk Cost
+posAmpJ = []
+negAmpJ = []
+
+for i in range(0, len(zeroCross)-2):
+    if gyr_z[round((zeroCross[i+1]+zeroCross[i])/2)]>0:
+        i1 = zeroCross[i]
+        i2 = zeroCross[i+1]
+        posAmpJ.append(math.pow(max(totalAcc[i1:i2]),2)/(seconds[i2]-seconds[i1]))
+    else:
+        i1 = zeroCross[i]
+        i2 = zeroCross[i + 1]
+        negAmpJ.append(math.pow(max(totalAcc[i1:i2]), 2) / (seconds[i2] - seconds[i1]))
+
+plt.bar(tPos, posAmpJ, width=0.3)
+plt.bar(tNeg, negAmpJ, width=0.3)
+plt.xlabel("Time (s)")
+plt.ylabel('Jerk Cost (m^2/s^5)')
+plt.title("Jerk Cost per Kick: Up vs. Down")
+plt.legend("positive", "negative")
+plt.show()
+
+#Velocity
+posAmpV = []
+negAmpV = []
+
+for i in range(0, len(zeroCross)-2):
+    if gyr_z[round((zeroCross[i+1]+zeroCross[i])/2)]>0:
+        i1 = zeroCross[i]
+        i2 = zeroCross[i+1]
+        posAmpV.append(np.trapz(seconds[i1:i2],totalAcc[i1:i2]))
+    else:
+        i1 = zeroCross[i]
+        i2 = zeroCross[i + 1]
+        negAmpV.append(-np.trapz(seconds[i1:i2],totalAcc[i1:i2]))
+
+plt.bar(tPos, posAmpV, width=0.3)
+plt.bar(tNeg, negAmpV, width=0.3)
+plt.xlabel("Time (s)")
+plt.ylabel('Velocity (m/s)')
+plt.title("Absolute Velocity per Kick: Up vs. Down")
+plt.legend("positive", "negative")
+plt.show()
