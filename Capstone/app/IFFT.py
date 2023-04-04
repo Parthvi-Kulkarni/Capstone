@@ -2,6 +2,7 @@ import scipy
 from numpy.fft import rfft,fft
 from scipy.fft import irfft, ifft
 import numpy as np
+import matplotlib.pyplot as plt
 
 def fourierFilt(raw_sig):
     freq = 88
