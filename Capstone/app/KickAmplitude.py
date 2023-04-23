@@ -9,7 +9,7 @@ from ahrs.filters import Madgwick
 from pyquaternion import Quaternion
 
 # Import csv
-df = pd.read_csv('C:/Users/jade-/PycharmProjects/Capstone/Capstone/app/data/testE.csv')
+df = pd.read_csv('')
 
 # Create Filter Parameters
 b, a = signal.butter(4, 0.1, 'lowpass')
