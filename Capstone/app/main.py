@@ -2,123 +2,114 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from scipy import signal
+from scipy import signal 
 from numpy.fft import fft
-import kickingfrequency
+from kickingfrequency import *
 import math
+import format_data 
+import MetaOutputParser 
+import os 
+import glob 
+import warnings
 
-# Import csv
-df = pd.read_csv('Capstone/app/data/cut_data0130_1.csv')
-
-raw_acc_x = df[df.columns[0]]/9.81
-raw_acc_y = df[df.columns[1]]/9.81
-raw_acc_z = df[df.columns[2]]/9.81
-raw_gyr_x = df[df.columns[3]]
-raw_gyr_y = df[df.columns[4]]
-raw_gyr_z = df[df.columns[5]]
-
-raw_A1 = [raw_acc_x, raw_acc_y, raw_acc_z]
-raw_G1 = [raw_gyr_x, raw_gyr_y, raw_gyr_z]
-
-time = df[df.columns[7]]
-length = len(time)
-
-# Convert microseconds to seconds
-seconds = []
-for i in range(0, length):
-    seconds.append(time[i]/math.pow(10, 6))
-
-## To handle timestamping for datasets D, E, and F:
-# milliseconds = []
-# for i in range(0,length):
-#     timestamp = datetime.strptime(time[i], '%H:%M:%S.%f')
-#     ms = timestamp.timestamp() * 1000
-#     milliseconds.append(ms)
-# df['Milliseconds'] = milliseconds
-# ms = df[df.columns[8]]
-
-# Visualization of Raw Data
-plt.plot(time, raw_gyr_z, color='b', label='Noisy Signal')
-plt.xlabel('Time (seconds)')
-plt.ylabel('Angular Velocity')
-plt.show()
-
-# Compute Fourier Transform
-fs = 100
-dt = 1/fs
-n = length
-fhat = np.fft.fft(raw_gyr_z, n) #computes the fft
-psd = fhat * np.conj(fhat)/n
-freq = (1/(dt*n)) * np.arange(n) #frequency array
-idxs_half = np.arange(1, np.floor(n/2), dtype=np.int32) #first half index
-
-# Visualization of Fourier Transform
-plt.plot(freq[idxs_half], np.abs(psd[idxs_half]), color='b', lw=0.5, label='PSD noisy')
-plt.xlabel('Frequencies in Hz')
-plt.ylabel('Amplitude')
-plt.show()
-
-# INSERT IFFT HERE
-#
-#
+# Setup 
+path = os.getcwd() + '/data'
+input_path = path + '/input/'
+intermediate_path = path + '/intermediate/'
+out_path = path + '/output/'
+if os.path.exists(out_path) == False:
+        os.makedirs(out_path)
+if os.path.exists(intermediate_path + 'goggles') == False:
+        os.makedirs(intermediate_path + 'goggles')
+if os.path.exists(intermediate_path + 'fins') == False:
+        os.makedirs(intermediate_path + 'fins')
+# format_data(path)
 
 
-b,a = signal.butter(4,3.14/fs,'lowpass')
-signal_filtered = signal.filtfilt(b, a, raw_gyr_z)
+def match_file(intermediate_path,out_path): 
+        goggle_path = intermediate_path +'/goggles'
+        fins_path = intermediate_path +'/fins'
+        # Filename is last term in parsed expression
+        # Add method here which reads in RT file by matching filename and then appends kick_freq by window to the RT CSV 
+        rt_files = glob.glob(os.path.join(goggle_path, "*.csv"))
+        fin_files = glob.glob(os.path.join(fins_path,"*.csv"))
+        print(rt_files)
+        for f in fin_files:
+                parsedName = f.split("/")
+                filename = parsedName[len(parsedName) - 1] 
+                df = pd.read_csv(f)
+                print(df)
+                df = filter_data(df) 
+                fin_parameters = filename.split("_")
+                for i in rt_files:
+                        rt_parameters = i.split("/")
+                        rt_parameters = rt_parameters[len(rt_parameters) - 1].split("_")
+                        print(rt_parameters)
+                        if(fin_parameters[0] == rt_parameters[0]):
+                                if(rt_parameters[1]== fin_parameters[1]): # if swimmer name matches 
+                                        goggles_file = i
+                                        fins_file = f 
+                                        df_rt = pd.read_csv(goggles_file)
+                                        df.columns = ['acc_x', 'acc_y', 'acc_z', 'gyr_x', 'gyr_y', 'gyr_z','pressure','depth','time']
+                                        # THIS Line is where timestamp syncing should be called 
+                                        df = pd.concat([df,df_rt], sort=False,axis =1)
+                                        df.to_csv(out_path+rt_parameters[0]+rt_parameters[1]+'_complete.csv')
 
-# Filter Signals
-acc_x = signal.filtfilt(b, a, raw_acc_x)
-acc_y = signal.filtfilt(b, a, raw_acc_y)
-acc_z = signal.filtfilt(b, a, raw_acc_z)
-gyr_x = signal.filtfilt(b, a, raw_gyr_x)
-gyr_y = signal.filtfilt(b, a, raw_gyr_y)
+def filter_data(df): # data filtering 
+        fs = 88; 
+        b,a = signal.butter(4,3.14/fs,'lowpass')  
+        df_filtered = pd.DataFrame()
+        df_filtered['acc_x'] = signal.filtfilt(b, a, df['raw_acc_x'])
+        df_filtered['acc_y'] = signal.filtfilt(b, a, df['raw_acc_y'])
+        df_filtered['acc_z'] = signal.filtfilt(b, a, df['raw_acc_y'])
+        df_filtered['gyr_x'] = df['raw_gyr_x']
+        df_filtered['gyr_y'] = df['raw_gyr_y'] 
+        df_filtered['gyr_z'] = df['raw_gyr_z']
+        df_filtered['pressure'] = df['raw_pressure']
+        df_filtered['depth'] = df['raw_pressure']/(pow(10,3)*9.81)
+        df_filtered['time'] = df['time']
+        return df_filtered
 
-#Visualization
-fig, ax = plt.subplots(2,1)
-ax[0].plot(seconds, raw_gyr_z, color='b', lw=0.5, label='Noisy Signal')
-ax[0].set_xlabel('Time (seconds)')
-ax[0].set_ylabel('Angular Velocity')
-ax[0].legend()
+def kick_intervals(data): ## Returns a list of the start of kicking, a list of potential kick interval starts, a list of kick interval endpoints
+        df = data
+        peaks,_ = signal.find_peaks(df['pressure'],height=[103000,109000],width = [0.1,45])
+        df['kicking'] = df.apply(lambda x: 0, axis=1)
+        df['endpoints'] = df.apply(lambda x: 0, axis=1)
+        start = peaks[0]
+        for i in range(0,len(peaks)-3): 
+                if peaks[i]>=peaks[i+1]-45:
+                        if peaks[i+1]>=peaks[i+2]-45:
+                                start = peaks[i]
+                                df['kicking'].iloc[peaks[i]] = 1
+                elif peaks[i]<=peaks[i+1]-100:
+                        df['endpoints'].iloc[peaks[i]] = 1
+                if i ==(len(peaks)-4):
+                        df['endpoints'].iloc[peaks[i]] = 1
+        s = df.index[df['kicking'] == 1].tolist()
+        print(s)
+        start = min(s)
+        print(start)
+        endpoints = df.index[df['endpoints'] == 1].tolist()
+        print(endpoints)
+        return start,s,endpoints
+                       
+def kick_count(df,s,endpoints): # Returns an array containing the kick count for each interval in which there was kick
+        kick_count_by_interval = pd.Series()
+        for i in range(0,len(endpoints)-1):
+                if i == 0:
+                        kick_count_by_interval[i] = len(zero_crossing(df,s[i],endpoints[i]))
+                if(i>0 and i < len(endpoints)):
+                        start = min(s.index[(s > endpoints[i-1] and s < endpoints[i])].tolist()) # interval is after preceeding endpoint and before next 
+                        kick_count_by_interval[i] = len(zero_crossing(df,start,endpoints[i]))
+                else: 
+                        start = min(s.index[s > endpoints[i-1]].tolist()) # interval is after second to last endpoint till last endpoint 
+                        kick_count_by_interval[i] = len(zero_crossing(df,start,endpoints[i]))
+        return kick_count_by_interval
 
-ax[1].plot(seconds, signal_filtered, color='r', lw=1, label='Clean Signal Retrieved')
-ax[1].set_xlabel('Time (seconds)')
-ax[1].set_ylabel('Angular Velocity')
-ax[1].legend()
+def zero_crossing(data,start,end):
+        zero_crossings = np.where(np.diff(np.sign(data[5][start:end])))[0]
+        return zero_crossings
 
-plt.subplots_adjust(hspace=0.4)
-plt.show()
-
-plt.plot(seconds, raw_gyr_z, color='b', label="Noisy Signal")
-plt.plot(seconds, signal_filtered, color='r', label="Clean Signal")
-plt.xlabel("Time (seconds)")
-plt.ylabel("Angular Velocity")
-plt.show()
-
-fhat2 = np.fft.fft(signal_filtered, n) #computes the fft
-psd_clean = fhat2 * np.conj(fhat2)/n
-
-plt.plot(freq[idxs_half], np.abs(psd_clean[idxs_half]), color='b', lw=0.5, label='PSD clean')
-plt.xlabel('Frequencies in Hz')
-plt.ylabel('Amplitude')
-plt.show()
-
-# Zero-crossing
-zero_crossings = np.where(np.diff(np.signbit(signal_filtered)))
-zeros = np.zeros(len(zero_crossings))
-
-length = len(seconds)
-translated_time = []
-for i in range(0, length):
-    translated_time.append(seconds[i] - seconds[0])
-
-# plt.title('Gyroscope Data')
-# plt.xlabel('Time (seconds)')
-# plt.ylabel('Angular Velocity')
-# plt.plot(seconds, signal_filtered, 'b')
-# plt.plot(zero_crossings, zeros, marker='o')
-# plt.show()
-
-
-## IMPLEMENT NEW ZERO_CROSSING METHOD HERE INSTEAD OF CALLING KICKING FREQUENCY
-average_frequency = kickingfrequency.zero_crossing(time, zero_crossings)
-print('Kicking frequency: ' + str(average_frequency) + ' kicks per second')
+MetaOutputParser.parseRT(input_path+'goggles',intermediate_path +'goggles/')
+format_data.format_data(input_path + 'fins',intermediate_path+ 'fins/')
+match_file(intermediate_path,out_path)

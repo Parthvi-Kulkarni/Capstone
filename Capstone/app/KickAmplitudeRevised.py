@@ -8,9 +8,10 @@ from pyquaternion import Quaternion
 from vqf import VQF
 
 # Import csv
-from Capstone.app.IFFT import fourierFilt
+from IFFT import fourierFilt
 
-df = pd.read_csv("C:/Users/jade-/OneDrive/Documents/UBC 2022-23/BMEG 457/Testing/February 2023/feb22.csv")
+df = pd.read_csv("")
+
 
 # Retrieve raw data files
 raw_acc_x = df[df.columns[0]]
@@ -59,7 +60,9 @@ plt.xlabel('time (s)')
 plt.ylabel('angle (deg)')
 plt.show()
 
+# Why is this here?
 b, a = signal.butter(4, 0.1, 'lowpass')
+
 
 window_size = 100
 numbers_series = pd.Series(signal.filtfilt(b, a, distDeg))
@@ -146,6 +149,7 @@ plt.ylabel('acceleration [m/s^2]')
 plt.show()
 
 # Quaternion amplitude
+# Summing degree distance between two quaternions defining as upkick or downkick 
 posAmpQ = []
 negAmpQ = []
 tPos = []
@@ -183,6 +187,8 @@ plt.show()
 posAmpJ = []
 negAmpJ = []
 
+ 
+
 for i in range(0, len(zeroCross)-2):
     if gyr_z[round((zeroCross[i+1]+zeroCross[i])/2)]>0:
         i1 = zeroCross[i]
@@ -193,6 +199,7 @@ for i in range(0, len(zeroCross)-2):
         i2 = zeroCross[i + 1]
         negAmpJ.append(math.pow(max(totalAcc[i1:i2]), 2) / (seconds[i2] - seconds[i1]))
 
+# TBD ~ Not rigorously done 
 plt.bar(tPos, posAmpJ, width=0.3)
 plt.bar(tNeg, negAmpJ, width=0.3)
 plt.xlabel("Time (s)")
